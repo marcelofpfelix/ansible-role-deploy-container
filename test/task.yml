@@ -1,0 +1,15 @@
+---
+# install testing requirements
+- name: Install packages
+  ansible.builtin.package:
+    name:
+      - python3
+      - python3-pip
+      # python3-docker
+    update_cache: true
+
+- name: Install and upgrade pip
+  ansible.builtin.pip:
+    name: docker
+    extra_args: --upgrade
+    executable: pip3

@@ -1,0 +1,44 @@
+---
+
+- name: Disable {{ service_name }}
+  ansible.builtin.systemd:
+    name: "{{ service_name }}.service"
+    state: stopped
+    enabled: false
+    daemon_reload: true
+  failed_when: false
+  when: not (deploy_service_is_darwin | bool)
+
+- name: Unload launchd service {{ service_control_name }}
+  ansible.builtin.command:
+    argv:
+      - "{{ launchctl_bin }}"
+      - unload
+      - -w
+      - "{{ service_unit_path }}"
+  changed_when: false
+  failed_when: false
+  when: deploy_service_is_darwin | bool
+
+- name: Remove env file {{ service_name }}
+  ansible.builtin.file:
+    path: "{{ service_config_dir }}/{{ service_name }}.env"
+    state: absent
+  when: deploy_service_runtime == 'container'
+
+- name: Remove service file {{ service_name }}
+  ansible.builtin.file:
+    path: "{{ service_unit_path }}"
+    state: absent
+
+- name: Remove launchd wrapper {{ service_name }}
+  ansible.builtin.file:
+    path: "{{ macos_launchd_script_path }}"
+    state: absent
+  when: deploy_service_is_darwin | bool
+
+- name: Remove docker container {{ service_name }}
+  community.docker.docker_container:
+    name: "{{ container_name }}"
+    state: absent
+  when: deploy_service_runtime == 'container'

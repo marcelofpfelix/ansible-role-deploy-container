@@ -2,28 +2,31 @@
 dependencies: []
 
 galaxy_info:
-  role_name: deploy-container
+  role_name: deploy_service
   author: marcelofpfelix
-  description: deploy container
+  description: deploy systemd or launchd services, optionally backed by Docker containers
   company: "marcelofpfelix"
   license: "license (BSD, MIT)"
-  min_ansible_version: 2.4
+  min_ansible_version: "2.4"
   platforms:
     - name: EL
       versions:
-        - 7
-        - 8
+        - "8"
     - name: Debian
       versions:
-        - stretch
         - buster
         - bullseye
     - name: Ubuntu
       versions:
-        - xenial
-        - bionic
         - focal
         - jammy
+    - name: MacOSX
+      versions:
+        - all
   galaxy_tags:
     - containers
     - docker
+    - deploy
+    - launchd
+    - service
+    - systemd

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>{{ macos_launchd_label }}</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>{{ macos_launchd_script_path }}</string>
+  </array>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>{{ macos_launchd_path }}</string>
+{% set service_env = service_environment | default({}) %}
+{% for key, value in (service_env if service_env is mapping else {}).items() %}
+    <key>{{ key }}</key>
+    <string>{{ value }}</string>
+{% endfor %}
+  </dict>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>KeepAlive</key>
+  <dict>
+    <key>SuccessfulExit</key>
+    <false/>
+  </dict>
+
+  <key>StandardOutPath</key>
+  <string>{{ macos_launchd_stdout_path }}</string>
+
+  <key>StandardErrorPath</key>
+  <string>{{ macos_launchd_stderr_path }}</string>
+</dict>
+</plist>

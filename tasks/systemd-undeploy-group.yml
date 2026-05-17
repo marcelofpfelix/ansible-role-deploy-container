@@ -1,0 +1,8 @@
+- name: Use task in loop for {{ group }}
+  vars:
+    service: "{{ container_item }}"
+  ansible.builtin.include_tasks: tasks/systemd-undeploy.yml
+  with_items:
+    - "{{ vars[group] }}"
+  loop_control:
+    loop_var: container_item

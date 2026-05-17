@@ -1,48 +1,22 @@
----
+- name: Validate service settings {{ service_name }}
+  ansible.builtin.assert:
+    that:
+      - service_name | length > 0
+      - deploy_service_runtime in ['command', 'container']
+      - deploy_service_runtime == 'container' or service_exec_start | length > 0
+    fail_msg: "Set service_name and service_exec_start for command services, or set container for container services."
 
-# create directory
-- name: create main directories
-  file:
-    state: directory
-    mode: 0755
-    path: "/etc/docker/"
+- name: Include vars {{ service_name }}
+  ansible.builtin.include_vars:
+    file: "{{ container_var_path }}"
+  when: container_var
 
-# env
-- name: template {{ container }} env file
-  template:
-    src: templates/template.env.j2
-    dest: /etc/docker/{{ container }}.env
+- name: Include files
+  ansible.builtin.include_tasks: files.yml
 
-# service
-- name: template {{ container }} service file
-  template:
-    src: templates/container.service
-    dest: /etc/systemd/system/{{ container }}.service
-  register: unit
-- name: Enable service
-  command: systemctl enable {{ container }}.service
-  
-- name: Get latest Image
-  community.docker.docker_image:
-    name: "{{ container_registry }}/{{ registryns }}/{{ image }}"
-    tag: "{{ tag }}"
-    source: pull
-    force_source: "yes"
+- name: Include docker
+  ansible.builtin.include_tasks: docker.yml
+  when: deploy_service_runtime == 'container'
 
-- name: Reload SystemD
-  command: systemctl daemon-reload
-  when: unit.changed
-
-- name: start {{ container }} Service Container
-  command: systemctl restart {{ container }}.service
-
-- name: Waiting for {{ container }} to be running
-  shell: >
-    docker inspect -f \
-      {% raw %}'{{ json .State }}'{% endraw %} \
-      {{ container }}
-  register: container_state
-  until: (container_state.stdout|from_json).Running and (container_state.stdout|from_json).ExitCode == 0
-  delay: 10
-  retries: 3
-
+- name: Include restart
+  ansible.builtin.include_tasks: restart.yml

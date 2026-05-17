@@ -1,0 +1,67 @@
+service_name: "{{ container | default(service.name | default(service | default(''))) }}"
+deploy_service_runtime: "{{ 'container' if container is defined or (service is defined and service is string) else 'command' }}"
+service_description: "{{ service.description | default(service_name ~ ' service') }}"
+service_exec_start: "{{ service.exec_start | default(service.command | default('')) }}"
+service_exec_stop: "{{ service.exec_stop | default('') }}"
+service_working_directory: "{{ service.working_directory | default('') }}"
+service_user: "{{ service.user | default('') }}"
+service_group: "{{ service.group | default('') }}"
+service_environment: "{{ service.environment | default({}) }}"
+service_restart: "{{ service.restart | default('') }}"
+service_systemd_type: "{{ service.systemd_type | default('simple') }}"
+service_standard_output: "{{ service.standard_output | default('') }}"
+
+container_name: "{{ container | default(service_name) }}"
+tag: latest
+image: "{{ container_name }}"
+
+ports: ""
+volumes: ""
+labels: ""
+network: "{{ '' if (ansible_os_family | default(ansible_system | default(''))) == 'Darwin' else '--net host' }}"
+extra_args: ""
+command: ""
+container_registry: index.docker.io
+registryns: library
+
+docker_dir_mode: "0755"
+deploy_service_home: "{{ ansible_user_dir | default((ansible_env | default({})).HOME | default(lookup('ansible.builtin.env', 'HOME'))) }}"
+deploy_service_is_darwin: "{{ ansible_os_family | default(ansible_system | default('')) == 'Darwin' }}"
+service_config_dir: "{{ deploy_service_home ~ '/.config/deploy-service' if (ansible_os_family | default(ansible_system | default(''))) == 'Darwin' else ('/etc/docker/' if (container is defined or (service is defined and service is string)) else '/etc/deploy-service/') }}"
+service_data_dir: "{{ deploy_service_home ~ '/.local/share/deploy-service/' if (ansible_os_family | default(ansible_system | default(''))) == 'Darwin' else ('/etc/docker/' if (container is defined or (service is defined and service is string)) else '/etc/deploy-service/') }}"
+docker_dir: "{{ service_config_dir }}"
+docker_vol: "{{ service_data_dir }}"
+container_var: "{{ container is defined or (service is defined and service is string) }}"
+container_var_path: "{{ 'vars/containers/' ~ service_name ~ '.yml' if (container is defined or (service is defined and service is string)) else 'vars/services/' ~ service_name ~ '.yml' }}"
+
+env_file: "--env-file {{ service_config_dir }}/{{ service_name }}.env"
+registry_path: "{{ container_registry }}/{{ registryns }}/{{ image }}:{{ tag }}"
+container_args: "{{ network }} {{ ports }} {{ extra_args }} {{ volumes }} {{ labels }} {{ env_file }} {{ registry_path }} {{ command }}"
+
+username: "{{ lookup('ansible.builtin.env', 'USER') }}"
+
+copy_template: false
+copy_files: false
+tag_push: false
+docker_build: false
+undeploy: false
+deploy_service_no_log: "{{ no_log | default(true) }}"
+
+docker_bin: "{{ 'docker' if (ansible_os_family | default(ansible_system | default(''))) == 'Darwin' else '/usr/bin/docker' }}"
+
+macos_launchd_label: "deploy-service.{{ service_name }}"
+macos_launchd_dir: "{{ deploy_service_home }}/Library/LaunchAgents"
+macos_launchd_plist_path: "{{ macos_launchd_dir }}/{{ macos_launchd_label }}.plist"
+macos_launchd_script_dir: "{{ deploy_service_home }}/.local/bin"
+macos_launchd_script_path: "{{ macos_launchd_script_dir }}/{{ macos_launchd_label }}"
+macos_launchd_log_dir: "{{ deploy_service_home }}/Library/Logs/deploy-service"
+macos_launchd_stdout_path: "{{ macos_launchd_log_dir }}/{{ service_name }}.out.log"
+macos_launchd_stderr_path: "{{ macos_launchd_log_dir }}/{{ service_name }}.err.log"
+macos_launchd_path: "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+
+service_control_name: "{{ macos_launchd_label if (ansible_os_family | default(ansible_system | default(''))) == 'Darwin' else service_name }}"
+service_template: "{{ 'templates/service.launchd.plist.j2' if (ansible_os_family | default(ansible_system | default(''))) == 'Darwin' else 'templates/service.systemd.j2' }}"
+service_unit_path: "{{ macos_launchd_plist_path if (ansible_os_family | default(ansible_system | default(''))) == 'Darwin' else '/etc/systemd/system/' ~ service_name ~ '.service' }}"
+service_files_src: "{{ 'files/containers/' ~ service_name if (container is defined or (service is defined and service is string)) else 'files/services/' ~ service_name }}"
+service_templates_src: "{{ 'templates/containers/' ~ service_name if (container is defined or (service is defined and service is string)) else 'templates/services/' ~ service_name }}"
+launchctl_bin: /bin/launchctl

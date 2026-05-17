@@ -1,0 +1,28 @@
+---
+- name: Install requirements
+  hosts:
+    - localhost
+  become: true
+  tasks:
+    - name: Add requirements tasks
+      ansible.builtin.include_tasks: "task.yml"
+
+# install docker
+- name: Install docker
+  become: true
+  hosts:
+    - localhost
+  roles:
+    - geerlingguy.docker
+
+# deploy container
+- name: Test deploy
+  hosts:
+    - localhost
+  become: true
+  vars:
+    container: whoami
+    registryns: traefik
+    container_var: false
+  roles:
+    - role: role_under_test

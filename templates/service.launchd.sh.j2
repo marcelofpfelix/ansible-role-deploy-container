@@ -1,0 +1,36 @@
+#!/bin/sh
+set -eu
+
+export PATH="{{ macos_launchd_path }}"
+
+child=""
+
+cleanup() {
+{% if deploy_service_runtime == 'container' %}
+  {{ docker_bin }} stop {{ container_name }} >/dev/null 2>&1 || true
+{% elif service_exec_stop %}
+  {{ service_exec_stop }} >/dev/null 2>&1 || true
+{% else %}
+  if [ -n "$child" ]; then
+    kill "$child" >/dev/null 2>&1 || true
+  fi
+{% endif %}
+}
+
+trap cleanup INT TERM HUP
+
+{% if service_working_directory %}
+cd "{{ service_working_directory }}"
+{% endif %}
+
+{% if deploy_service_runtime == 'container' %}
+{{ docker_bin }} stop {{ container_name }} >/dev/null 2>&1 || true
+{{ docker_bin }} rm -f {{ container_name }} >/dev/null 2>&1 || true
+
+{{ docker_bin }} run --name {{ container_name }} {{ container_args }} &
+{% else %}
+{{ service_exec_start }} &
+{% endif %}
+child="$!"
+
+wait "$child"

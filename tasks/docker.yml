@@ -1,0 +1,36 @@
+---
+- name: Build an image
+  community.docker.docker_image:
+    build:
+      path: "{{ dockerfile_path }}"
+    name: "{{ registry_path }}"
+    tag: "{{ tag }}"
+    source: build
+  when: docker_build
+  connection: local
+
+- name: "Tag the image"
+  community.docker.docker_image:
+    name: "{{ source_registry_path }}"
+    repository: "{{ registry_path }}"
+    source: local
+    force_absent: true
+    force_tag: true
+  when: tag_push
+  connection: local
+
+- name: "Push to docker registry"
+  community.docker.docker_image:
+    name: "{{ registry_path }}"
+    push: true
+    source: local
+  when: tag_push
+  connection: local
+
+- name: Get latest Image
+  community.docker.docker_image:
+    name: "{{ container_registry }}/{{ registryns }}/{{ image }}"
+    tag: "{{ tag }}"
+    source: pull
+    force_source: true
+  register: img

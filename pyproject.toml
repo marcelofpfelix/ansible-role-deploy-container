@@ -1,0 +1,19 @@
+[project]
+name = "ansible-role-deploy-service"
+version = "0.1.0"
+description = "Ansible role for deploying systemd or launchd services, optionally backed by Docker containers."
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "ansible>=11.0.0,<12.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ansible-lint>=24.0.0",
+    "molecule>=24.0.0",
+    "molecule-plugins[docker]>=23.0.0",
+    "pre-commit>=4.0.0",
+]
+
+[tool.uv]
+exclude-newer = "30 days"
