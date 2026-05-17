@@ -1,0 +1,61 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  yaml-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        run: python -m pip install uv
+
+      - name: Run YAML and file hygiene checks
+        run: |
+          uv run --extra dev pre-commit run check-yaml --all-files
+          uv run --extra dev pre-commit run end-of-file-fixer --all-files
+          uv run --extra dev pre-commit run trailing-whitespace --all-files
+
+  ansible-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        run: python -m pip install uv
+
+      - name: Run ansible-lint
+        run: uv run --extra dev ansible-lint .
+
+  molecule:
+    runs-on: ubuntu-latest
+    needs:
+      - yaml-lint
+      - ansible-lint
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        run: python -m pip install uv
+
+      - name: Run Molecule
+        run: uv run --extra dev molecule test

@@ -1,0 +1,67 @@
+- name: Validate service settings {{ service_name }}
+  ansible.builtin.assert:
+    that:
+      - service_name | length > 0
+      - deploy_service_runtime in ['command', 'container']
+      - deploy_service_runtime == 'container' or service_exec_start | length > 0
+    fail_msg: "Set service_name and service_exec_start for command services, or set container for container services."
+
+- name: Include vars {{ service_name }}
+  ansible.builtin.include_vars:
+    file: "{{ container_var_path }}"
+  when: container_var
+
+- name: Create main directory
+  ansible.builtin.file:
+    state: directory
+    mode: "{{ docker_dir_mode }}"
+    path: "{{ service_config_dir }}"
+
+- name: Create launchd directories
+  ansible.builtin.file:
+    state: directory
+    mode: "0755"
+    path: "{{ item }}"
+  loop:
+    - "{{ macos_launchd_dir }}"
+    - "{{ macos_launchd_script_dir }}"
+    - "{{ macos_launchd_log_dir }}"
+  when: deploy_service_is_darwin | bool
+
+- name: Template env file {{ service_name }}
+  ansible.builtin.template:
+    src: templates/template.env.j2
+    dest: "{{ service_config_dir }}/{{ service_name }}.env"
+    mode: "0644"
+  register: env
+  no_log: "{{ deploy_service_no_log }}"
+  when: deploy_service_runtime == 'container'
+
+- name: Template launchd wrapper {{ service_name }}
+  ansible.builtin.template:
+    src: templates/service.launchd.sh.j2
+    dest: "{{ macos_launchd_script_path }}"
+    mode: "0755"
+  register: launchd_script
+  when: deploy_service_is_darwin | bool
+
+- name: Template service file {{ service_name }}
+  ansible.builtin.template:
+    src: "{{ service_template }}"
+    dest: "{{ service_unit_path }}"
+    mode: "0644"
+  register: service_file
+
+- name: Validate systemd service {{ service_name }}
+  ansible.builtin.command: "systemd-analyze verify {{ service_unit_path }}"
+  changed_when: false
+  when: not (deploy_service_is_darwin | bool)
+
+- name: Validate launchd plist {{ service_name }}
+  ansible.builtin.command:
+    argv:
+      - plutil
+      - -lint
+      - "{{ service_unit_path }}"
+  changed_when: false
+  when: deploy_service_is_darwin | bool

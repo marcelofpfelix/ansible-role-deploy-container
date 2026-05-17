@@ -1,0 +1,23 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  tasks:
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Assert systemd unit exists and is running
+      ansible.builtin.assert:
+        that:
+          - "'molecule-command.service' in ansible_facts.services"
+          - ansible_facts.services['molecule-command.service'].state == 'running'
+
+    - name: Stat rendered unit
+      ansible.builtin.stat:
+        path: /etc/systemd/system/molecule-command.service
+      register: molecule_unit
+
+    - name: Assert rendered unit exists
+      ansible.builtin.assert:
+        that:
+          - molecule_unit.stat.exists

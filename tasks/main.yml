@@ -1,1 +1,16 @@
-- include_tasks: systemd-deploy.yml
+---
+- name: Include systemd-deploy-group
+  ansible.builtin.include_tasks: tasks/systemd-deploy-group.yml
+  when: group is defined and not undeploy
+
+- name: Include systemd-deploy
+  ansible.builtin.include_tasks: tasks/systemd-deploy.yml
+  when: group is not defined and service_name | length > 0 and not undeploy
+
+- name: Include systemd-undeploy-group
+  ansible.builtin.include_tasks: tasks/systemd-undeploy-group.yml
+  when: group is defined and undeploy
+
+- name: Include systemd-undeploy
+  ansible.builtin.include_tasks: tasks/systemd-undeploy.yml
+  when: group is not defined and service_name | length > 0 and undeploy

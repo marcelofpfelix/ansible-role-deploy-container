@@ -1,0 +1,48 @@
+[Unit]
+Description={{ service_description }}
+{% if deploy_service_runtime == 'container' %}
+Requires=docker.service
+After=docker.service
+{% endif %}
+
+[Service]
+Type={{ service_systemd_type }}
+{% if service_user %}
+User={{ service_user }}
+{% endif %}
+{% if service_group %}
+Group={{ service_group }}
+{% endif %}
+{% if service_working_directory %}
+WorkingDirectory={{ service_working_directory }}
+{% endif %}
+{% set service_env = service_environment | default({}) %}
+{% for key, value in (service_env if service_env is mapping else {}).items() %}
+Environment="{{ key }}={{ value }}"
+{% endfor %}
+{% if deploy_service_runtime == 'container' %}
+ExecStartPre=-{{ docker_bin }} stop {{ container_name }}
+ExecStartPre=-{{ docker_bin }} rm -f {{ container_name }}
+ExecStartPre={{ docker_bin }} create --name {{ container_name }} {{ container_args }}
+
+ExecStart={{ docker_bin }} start -a {{ container_name }}
+
+ExecStop={{ docker_bin }} stop {{ container_name }}
+{% else %}
+ExecStart={{ service_exec_start }}
+{% if service_exec_stop %}
+ExecStop={{ service_exec_stop }}
+{% endif %}
+{% endif %}
+{% if service_restart %}
+Restart={{ service_restart }}
+{% endif %}
+
+{% if service_standard_output %}
+StandardOutput={{ service_standard_output }}
+{% elif deploy_service_runtime == 'container' %}
+StandardOutput=null
+{% endif %}
+
+[Install]
+WantedBy=default.target

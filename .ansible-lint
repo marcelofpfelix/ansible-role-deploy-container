@@ -1,0 +1,8 @@
+---
+exclude_paths:
+  - .ansible/
+  - .venv/
+  - test/
+
+skip_list:
+  - yaml[line-length]

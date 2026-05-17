@@ -1,0 +1,62 @@
+---
+- name: Pre deploy script {{ pre_deploy }}
+  ansible.builtin.command: "{{ pre_deploy }}"
+  register: pre_deploy
+  changed_when: pre_deploy.rc != 0
+  when: pre_deploy is defined and (service_file.changed or (img is defined and img.changed) or (env is defined and env.changed) or (launchd_script is defined and launchd_script.changed))
+  until: pre_deploy.stdout.Running and pre_deploy.stdout.ExitCode == 0
+  delay: 5
+  retries: 6
+
+- name: Restart SystemD Service Container
+  ansible.builtin.systemd:
+    name: "{{ service_name }}"
+    enabled: true
+    masked: false
+    daemon_reload: true
+    state: restarted
+  when: not (deploy_service_is_darwin | bool)
+
+- name: Unload launchd service {{ service_control_name }}
+  ansible.builtin.command:
+    argv:
+      - "{{ launchctl_bin }}"
+      - unload
+      - -w
+      - "{{ service_unit_path }}"
+  register: launchd_unload
+  changed_when: false
+  failed_when: false
+  when: deploy_service_is_darwin | bool
+
+- name: Load launchd service {{ service_control_name }}
+  ansible.builtin.command:
+    argv:
+      - "{{ launchctl_bin }}"
+      - load
+      - -w
+      - "{{ service_unit_path }}"
+  register: launchd_load
+  changed_when: true
+  when: deploy_service_is_darwin | bool
+
+- name: Waiting for container to be running {{ service_name }}
+  ansible.builtin.command: >
+    {{ docker_bin }} inspect -f \
+      {% raw %}'{{ json .State }}'{% endraw %} \
+      {{ container_name }}
+  register: container_state
+  until: (container_state.stdout|from_json).Running and (container_state.stdout|from_json).ExitCode == 0
+  changed_when: false
+  delay: 5
+  retries: 6
+  when: deploy_service_runtime == 'container'
+
+- name: Post deploy script {{ post_deploy }}
+  ansible.builtin.command: "{{ post_deploy }}"
+  register: post_deploy
+  changed_when: post_deploy.rc != 0
+  when: post_deploy is defined and (service_file.changed or (img is defined and img.changed) or (env is defined and env.changed) or (launchd_script is defined and launchd_script.changed))
+  until: post_deploy.stdout.Running and post_deploy.stdout.ExitCode == 0
+  delay: 5
+  retries: 6
