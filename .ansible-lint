@@ -1,6 +1,7 @@
 ---
 exclude_paths:
   - .ansible/
+  - tmp/
   - .venv/
   - test/
 

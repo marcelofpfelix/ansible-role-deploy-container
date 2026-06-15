@@ -7,6 +7,13 @@ current role release.
 
 - Add Molecule scenarios for Docker-backed services, undeploy, grouped services,
   and macOS rendering.
+- For Docker-backed service coverage, prefer Docker-in-Docker inside the
+  privileged Molecule systemd instance over host socket passthrough. The role
+  renders unit/env files inside the instance, and host socket passthrough would
+  make the host Docker daemon resolve container env-file paths on the host.
+- The Docker-backed scenario should install Docker plus the Python Docker
+  bindings, deploy a small long-running image such as `busybox sleep 3600`, and
+  verify both the service state and `docker inspect` running state.
 - Add a lightweight render-only scenario for Darwin facts if a native macOS
   runner is not available.
 
